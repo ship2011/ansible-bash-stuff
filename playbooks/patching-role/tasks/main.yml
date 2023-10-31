@@ -1,0 +1,32 @@
+---
+#- name: Execute Precheck script and Fetch precheck
+- block: 
+    - name: Executing Pre-check script 
+      script: oscheck.sh
+
+    - name: Getting generated pre-check on local host
+      fetch:
+         src: /tmp/precheck-{{ date }}
+         dest: pre/precheck-{{ date }}-{{ inventory_hostname }}
+         flat: yes
+  tags: precheck
+
+- name: Patching of Ubuntu servers
+  apt:
+    upgrade: dist
+    update_cache: yes
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Patching of SUSE servers
+  zypper:
+    name: '*'
+    state: latest
+  when: ansible_os_family == 'Suse'
+
+- name: Patching of Redhat & CentOs servers
+  yum:
+    name: '*'
+    state: latest
+    update_cache: yes
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+

@@ -1,0 +1,11 @@
+---
+- 
+  hosts: hostnames
+  become: yes
+  
+  # roles: list of roles to be imported into the play 
+  roles:
+    - role: patching-role
+    - role: password-role
+      tags: [never, password] 
+...

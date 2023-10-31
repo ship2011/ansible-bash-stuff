@@ -1,0 +1,3 @@
+---
+date: "{{ lookup('pipe', 'date +%y-%m-%d') }}"
+
