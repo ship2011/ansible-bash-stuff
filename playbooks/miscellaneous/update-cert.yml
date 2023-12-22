@@ -1,1 +1,23 @@
+-
+  hosts: hosts
+  become: yes
 
+  tasks:
+  - block:
+    - name: Copy cert to redhat VM
+      copy:
+       src: /home/yourcertslocation
+       dest: /usr/share/pki/ca-trust-source/anchors/
+         #remote_src: yes  
+    - name: Update cert on redhat VM
+      command: update-ca-trust
+    when: ansible_distribution == 'RedHat'
+
+  - block:
+    - name: Copy cert to SUSE VM
+      copy:
+       src: /home/yourcertlocation/cert/
+       dest: /usr/share/pki/trust/anchors/
+    - name: Update cert on SUSE VM
+      command: update-ca-certificates
+    when: ansible_distribution == 'SLES'
