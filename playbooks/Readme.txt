@@ -22,3 +22,5 @@ Now execute playbook along with password tags, For password change role I have d
 $ansible-playbook roles_playbook.yaml --inventory=servers -k -K --tags password
 
 
+
+##########################miscellaneous directory contain many mix playbooks for several small tasks you can read them and find their usage as of now nothing is updated about them in readme###############
