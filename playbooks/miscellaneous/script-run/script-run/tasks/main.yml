@@ -1,0 +1,12 @@
+---
+# Execute script
+
+- name: Executing any script 
+  script: yourscript.sh  > /tmp/scriptoupt.txt
+
+- name: Getting script output to local host
+  fetch:
+      src: /tmp/scriptoupt.txt
+      dest: /home/scrip-output-{{ date }}-{{ inventory_hostname }}
+      flat: yes
+
