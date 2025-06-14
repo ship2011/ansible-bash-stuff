@@ -386,7 +386,7 @@ You can use the `when` keyword to run tasks only when certain conditions are met
   when: ansible_os_family == "RedHat"
 ```
 
-You can also use logical operators:
+You can also use logical operators :
 
 ```yaml
 when: ansible_os_family == "RedHat" and httpd_enabled
@@ -397,7 +397,7 @@ when: ansible_os_family == "RedHat" or ansible_os_family == CentOs
 
 Loops allow you to repeat a task for multiple items. The most common way is using the `loop` keyword.
 
-**Example: Install multiple packages**
+**Example: Install multiple packages with list**
 
 ```yaml
 - name: Install a list of packages
@@ -696,6 +696,12 @@ password = {{ lookup('password', '/tmp/dbpassfile length=16 chars=ascii_letters'
 
 To include the output of the `date` command or any other command output from each host in your template, you first need to gather the date output as a fact or registered variable in your playbook, then use it in your Jinja2 template.
 
+**Template (`info.j2`):**
+```jinja2
+Host: {{ inventory_hostname }}
+Current date: {{ host_date }}
+```
+
 **Playbook:**
 ```yaml
 - name: Gather date output from each host
@@ -727,11 +733,6 @@ tasks:
         dest: /tmp/output.txt
 ```
 
-**Template (`info.j2`):**
-```jinja2
-Host: {{ inventory_hostname }}
-Current date: {{ host_date }}
-```
 The first task uses the slurp module to read the contents of /etc/hostname from the remote host and saves the result in the remote_hostname variable. The second task uses the template module to render a Jinja2 template (template.j2) and write the output to /tmp/output.txt on the remote host. This allows you to include information from the remote file in your generated template. The example template (info.j2) shows how you might display the host name and current date in the rendered file.
 
 
@@ -1099,11 +1100,11 @@ The `delegate_to` keyword allows you to run a specific task on a different host 
 
 - **Delegate to localhost:**
     ```yaml
-    - name: Fetch a file from remote host to control node
+    - name: Fetch a file from web1 host to control node
       fetch:
         src: /etc/hosts
         dest: /tmp/
-      delegate_to: localhost
+      delegate_to: web1
     ```
 
 - **Delegate to another host:**
@@ -1117,13 +1118,40 @@ The `delegate_to` keyword allows you to run a specific task on a different host 
 
 - **Copy a file from one remote host to another:**
     ```yaml
-    - name: Copy file from web1 to web2
-      copy:
-        src: /tmp/file.txt
-        dest: /tmp/file.txt
-      delegate_to: web2
-      run_once: true
+   - name: Copy file from web1 to web2 via scp
+     command: scp /tmp/file.txt web2:/tmp/file.txt
+     delegate_to: web1
+     run_once: true
     ```
+- Or you can use below example
+```yaml
+- name: Copy file from web1 to web2
+  hosts: localhost
+  gather_facts: false
+  vars:
+    src_host: web1
+    dest_host: web2
+    remote_file_path: /tmp/file.txt
+    temp_dir: /tmp  # Local temp dir where file will be fetched
+
+  tasks:
+
+    - name: Fetch file from web1 to control node
+      fetch:
+        src: "{{ remote_file_path }}"
+        dest: "{{ temp_dir }}/"
+        flat: yes
+      delegate_to: "{{ src_host }}"
+      run_once: true
+
+    - name: Copy file from control node to web2
+      copy:
+        src: "{{ temp_dir }}/file.txt"
+        dest: "{{ remote_file_path }}"
+      delegate_to: "{{ dest_host }}"
+      run_once: true
+
+       ```
 
 ### When to Use
 
@@ -1185,7 +1213,12 @@ Or gather only specific facts:
 - setup:
     filter: "ansible_hostname"
 ```
-### 5. Use Asynchronous Actions
+
+### 5. Use SSH Multiplexing
+
+Ansible enables SSH multiplexing by default, but ensure it’s not disabled in your config.
+
+### 6. Use Asynchronous Actions
 
 you can use Ansible's async and poll parameters to run them asynchronously. Setting async: 600 tells Ansible to allow the task up to 600 seconds (10 minutes) to finish. By setting poll: 0, you instruct Ansible not to wait for the task to complete and to move on to the next task immediately. This is useful for starting background jobs or when you want to avoid blocking the playbook execution while waiting for a long-running operation. You can later check the status of the asynchronous task using the async_status module if needed.
 
@@ -1214,15 +1247,15 @@ If you want to run async task without async_status
   async: 600
   poll: 0
 ```
-### 6. Use Mitogen (Optional)
+### 7. Use Mitogen (Optional)
 
 [Mitogen](https://mitogen.networkgenomics.com/) is a third-party plugin that can significantly speed up Ansible runs. Note: Not officially supported by Ansible.
 
-### 7. Limit Target Hosts
+### 8. Limit Target Hosts
 
 Use `--limit` to restrict execution to only necessary hosts.
 
-### 8. Use Tags
+### 9. Use Tags
 
 Run only relevant tasks using `--tags` to avoid unnecessary work.
 
