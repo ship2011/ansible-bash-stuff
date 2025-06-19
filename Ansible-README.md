@@ -92,14 +92,14 @@ Playbooks are more powerful and reusable than ad-hoc commands, making them ideal
     become: yes
     tasks:
         - name: Install httpd
-            apt:
-                name: httpd
-                state: present
+          apt:
+            name: httpd
+            state: present
 
         - name: start httpd service
-            service:
-                name: httpd
-                state: started
+          service:
+             name: httpd
+             state: started
 ```
 
 You can run a playbook using:
@@ -171,7 +171,7 @@ You can use variables in your tasks and templates by referencing them with doubl
 
 ## Importing Variable Files in a Playbook
 
-You can import variables from external YAML files using the `vars_files` directive in your playbook. This helps keep your playbooks clean and allows you to reuse variable definitions.
+You can import variables from external YAML files using the `vars_files` directive in your playbook. This helps to keep your playbooks clean and allows you to reuse variable definitions.
 
 **Example:**
 
@@ -191,7 +191,7 @@ You can include it in your playbook like this:
         - vars.yml
     tasks:
         - debug:
-                msg: "App will run on port {{ app_port }} with debug={{ app_debug }}"
+            msg: "App will run on port {{ app_port }} with debug={{ app_debug }}"
 ```
 
 ## Ansible Variable Data Types
@@ -202,6 +202,20 @@ Ansible variables can hold different data types, which determine how values are 
     - *Example:*
       ```yaml
       app_name: "myapp"
+      ```
+    multiline strings (|) preserving newline
+      ```yaml
+         multi_line_str_with_newline: |   
+                   user name test
+                   group name testing
+                   no sudo access given to user
+      ```
+     multiline strings (>) that convert newline to spaces
+     ```yaml
+         multi_line_str_with_newline: >   
+                   user name test
+                   group name testing
+                   no sudo access given to user
       ```
 
 - **Integer:** Numeric values without quotes.
@@ -395,7 +409,7 @@ when: ansible_os_family == "RedHat" or ansible_os_family == CentOs
 
 ### Loops
 
-Loops allow you to repeat a task for multiple items. The most common way is using the `loop` keyword.
+Loops allow you to repeat a task for multiple items. The most common way is using the `loop` keyword for loops.
 
 **Example: Install multiple packages with list**
 
@@ -417,10 +431,10 @@ Loops allow you to repeat a task for multiple items. The most common way is usin
   user:
     name: "{{ item.name }}"
     state: present
-    groups: "{{ item.groups }}"
+    groups: "{{ item.group }}"
   loop:
-    - { name: 'alice', groups: 'admin' }
-    - { name: 'bob', groups: 'users' }
+    - { name: 'alice', group: 'admin' }
+    - { name: 'bob', group: 'users' }
 ```
 
 ### Loop Control
@@ -434,15 +448,13 @@ pause	Adds a pause in seconds between loop iterations
 ```yaml
 - name: Print each user
   debug:
-    ```yaml
-      debug:
-        msg: "User is {{ user }}"
-      loop:
-        - alice
-        - bob
-      loop_control:
-        label: "{{ user }}"
-        loop_var: user
+      msg: "User is {{ user }}"
+  loop:
+    - alice
+    - bob
+  loop_control:
+     label: "{{ user }}"
+     loop_var: user
     ```
 
 ### Combining Loops and Conditionals
@@ -544,6 +556,42 @@ Use `failed_when` to mark a task as failed based on a custom condition, even if 
   register: log_output
   failed_when: "'error' in log_output.stdout"
 ```
+## Using `changed_when` in Ansible
+
+The `changed_when` directive allows you to control when a task is marked as "changed" based on custom conditions. This is useful when a module's default changed status does not accurately reflect whether a change occurred.
+
+**Example: Mark a task as changed only if output contains "updated"**
+
+```yaml
+- name: Run a command and mark changed only if output contains 'updated'
+  shell: some_command
+  register: cmd_result
+  changed_when: "'updated' in cmd_result.stdout"
+```
+
+**Example: Mark a task as unchanged regardless of module output**
+
+```yaml
+- name: Run a command but never mark as changed
+  shell: some_command
+  changed_when: false
+```
+
+**Example: Mark as changed if a file was actually modified**
+
+```yaml
+- name: Replace a line in a file
+  lineinfile:
+    path: /etc/myapp/config.conf
+    regexp: '^option='
+    line: 'option=enabled'
+  register: line_result
+  changed_when: line_result.changed
+```
+
+Use `changed_when` to ensure Ansible reports changes accurately in your playbook runs.
+
+For more, see the [Ansible documentation on changed_when](https://docs.ansible.com/ansible/latest/user_guide/playbooks_error_handling.html#overriding-changed-and-failed-results).
 
 ## Failing the Entire Playbook with `any_errors_fatal`
 
@@ -919,7 +967,7 @@ For a full list and advanced usage, see the [Ansible filters documentation](http
 
 ### What is a Play?
 
-A **play** in Ansible is a mapping between a group of hosts and the tasks that should be run on those hosts. Plays are defined in playbooks and allow you to orchestrate automation across multiple systems.
+A **play** in Ansible is a mapping between a group of hosts and the tasks that should run on those hosts. Plays are defined in playbooks and allow you to orchestrate automation across multiple systems.
 
 **Example of a play:**
 ```yaml
@@ -1087,7 +1135,6 @@ Or using the modern syntax:
   command: date
   delegate_to: localhost
 ```
-
 ### Using `delegate_to`
 
 The `delegate_to` keyword allows you to run a specific task on a different host than the one targeted by the play. This is commonly used for:
@@ -1100,11 +1147,11 @@ The `delegate_to` keyword allows you to run a specific task on a different host 
 
 - **Delegate to localhost:**
     ```yaml
-    - name: Fetch a file from web1 host to control node
+    - name: Fetch a file from remote host to control node
       fetch:
         src: /etc/hosts
         dest: /tmp/
-      delegate_to: web1
+      delegate_to: localhost
     ```
 
 - **Delegate to another host:**
@@ -1160,6 +1207,43 @@ The `delegate_to` keyword allows you to run a specific task on a different host 
 - When you need to gather or process data centrally
 
 For more, see the [Ansible documentation on delegation](https://docs.ansible.com/ansible/latest/user_guide/playbooks_delegation.html).
+
+## Retrying Tasks and Adding Delays in Ansible
+
+Ansible allows you to retry tasks that might fail due to temporary issues (like network hiccups or service startup delays) using the `retries` and `delay` parameters with the `until` keyword. This is useful for tasks that may not succeed immediately but are expected to succeed after some time.
+
+**Example: Retry a task until it succeeds**
+
+```yaml
+- name: Wait for web server to respond
+  uri:
+    url: http://localhost
+    status_code: 200
+  register: result
+  until: result.status == 200
+  retries: 5
+  delay: 10
+```
+
+- `until`: The condition to check after each try.
+- `retries`: Maximum number of attempts.
+- `delay`: Seconds to wait between attempts.
+
+**Example: Wait for a file to exist**
+
+```yaml
+- name: Wait for file to be created
+  stat:
+    path: /tmp/somefile
+  register: file_stat
+  until: file_stat.stat.exists
+  retries: 10
+  delay: 5
+```
+
+This approach is helpful for polling resources, waiting for services, or handling eventual consistency.
+
+For more, see the [Ansible documentation on looping and retries](https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#retrying-a-task-until-a-condition-is-met).
 
 ## Speeding Up Ansible
 
@@ -1381,3 +1465,116 @@ Ansible continues to evolve rapidly, driven by community contributions and enter
 Ansible’s open-source model and strong community ensure it remains at the forefront of IT automation, adapting to new technologies and use cases.
 
 For more, see the [Ansible roadmap](https://github.com/ansible/ansible-roadmap) and [community updates](https://www.ansible.com/blog).
+
+## Some usefull examples
+Write playbook to create and Configure a "testing" User for Passwordless SSH and sudo access
+```yaml
+- name: Create testing user for passwordless SSH and sudo access
+  hosts: all
+  become: yes
+  tasks:
+    - name: ensure testing user is present with a home directory
+      user:
+        name: testing
+        state: present
+        shell: /bin/bash
+        create_home: yes
+
+    - name: ensure testing user's .ssh directory exists
+      file:
+        path: /home/testing/.ssh
+        state: directory
+        mode: '0700'
+        owner: testing
+        group: testing
+
+    - name: copy public key to testing user for paswordless ssh connection
+      authorized_key:
+        user: testing
+        key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+        state: present
+
+    - name: add testing user in sudoers file
+      blockinfile:
+        path: /etc/sudoers
+        block: |
+          #allow testing user to run all commands without password
+          testing ALL=(ALL) NOPASSWD: ALL
+        validate: '/usr/sbin/visudo -cf %s'
+   ```
+   visudo -cf to validate the sudoers syntax before applying the change
+
+  If you want to set a password for the `testing` user during creation, you can use the `password` parameter in the `user` module. The password must be provided as a hashed value (not plain text). You can generate a hashed password by using the `openssl passwd -6` command on your control node:
+
+  ```bash
+  openssl passwd -6
+  ```
+  Then, update the hashed generated password:
+
+  ```yaml
+  - name: ensure testing user is present with a home directory and password
+    user:
+      name: testing
+      state: present
+      shell: /bin/bash
+      create_home: yes
+      password: "$6$round...$hashedpasswordxxxxxxxxx"
+  ```
+  **Note:**  
+  - Never store plain text passwords in playbooks.
+
+Write a playbook to install and configure an Apache web servers and firewall on servers, sets up a test homepage, and ensures HTTP access is allowed. It then verifies that the web servers are running and accessible.
+
+```yaml
+- name: Enable intranet services on all web servers
+  hosts: webservers
+  become: true
+  tasks:
+    - name: Latest version of httpd and firewalld installed
+      dnf:
+        name:
+          - httpd
+          - firewalld
+        state: latest
+
+    - name: Test html page is installed
+      copy:
+        content: "Welcome to the example.com intranet!\n"
+        dest: /var/www/html/index.html
+
+    - name: Firewall enabled and running
+      service:
+        name: firewalld
+        enabled: true
+        state: started
+
+    - name: Firewall permits access to httpd service
+      firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        immediate: true
+
+    - name: Web server enabled and running
+      service:
+        name: httpd
+        enabled: true
+        state: started
+
+- name: Test intranet web servers from workstations
+  hosts: workstations
+  become: false
+  vars:
+    webserver_list: "{{ groups['webservers'] | default([]) }}"
+  tasks:
+    - name: Connect to intranet web servers
+      ansible.builtin.uri:
+        url: "http://{{ item }}"
+        return_content: true
+        status_code: 200
+      loop: "{{ webserver_list }}"
+```
+
+**Notes:**
+- Define your `webservers` and `workstations` groups in your inventory.
+- The test task will check all web servers from each workstation host.
