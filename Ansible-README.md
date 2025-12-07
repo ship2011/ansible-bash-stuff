@@ -204,12 +204,14 @@ Ansible variables can hold different data types, which determine how values are 
       app_name: "myapp"
       ```
     multiline strings (|) preserving newline
+
       ```yaml
-          multi_line_str_with_newline: |   
+         multi_line_str_with_newline: |  
                    user name test
                    group name testing
                    no sudo access given to user
       ```
+
      multiline strings (>) that convert newline to spaces
      ```yaml
          multi_line_str_with_newline: >   
