@@ -367,6 +367,7 @@ done
 ### Associative Arrays
 
 Associative arrays use keys/value paris and require Bash version 4.0 or higher.
+```
 declare -A colors
 colors[apple]="red"
 colors[banana]="yellow"
