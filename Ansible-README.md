@@ -88,9 +88,9 @@ Playbooks are more powerful and reusable than ad-hoc commands, making them ideal
 
 ```yaml
 - name: Install and start httpd service
-    hosts: web
-    become: yes
-    tasks:
+  hosts: web
+  become: yes
+  tasks:
         - name: Install httpd
           apt:
             name: httpd
